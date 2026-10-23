@@ -17,6 +17,18 @@
 </div>
 {% endif %}
 
+{% if just_logged %}
+<div class="alert alert-success d-flex justify-content-between align-items-center" role="alert">
+    <div>
+        <i class="bi bi-check-circle"></i>
+        <strong>Your mood ({{ just_logged|capitalize }}) has been logged!</strong>
+    </div>
+    <a href="{{ url_for('chat.index', fresh='1') }}" class="btn btn-success">
+        <i class="bi bi-chat-dots"></i> Continue to Chat
+    </a>
+</div>
+{% endif %}
+
 <!-- Period Filter -->
 <div class="btn-group mb-4" role="group" aria-label="Time period filter">
     <a href="{{ url_for('mood.index', period='7') }}"

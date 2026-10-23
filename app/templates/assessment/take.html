@@ -8,29 +8,118 @@
             <h4 class="mb-2">{{ assessment.title }}</h4>
             <p class="text-muted mb-4">{{ assessment.description }}</p>
 
-            <form method="POST" action="{{ url_for('assessment.submit', category=category) }}">
+            <form method="POST"
+                  action="{{ url_for('assessment.submit', category=category) }}"
+                  id="assessmentForm">
                 {% for question in assessment.questions %}
-                <div class="mb-4 p-3 bg-light rounded">
-                    <p class="fw-bold mb-2">{{ loop.index }}. {{ question }}</p>
-                    <div class="d-flex flex-wrap gap-2">
+                {% set question_index = loop.index0 %}
+                <div class="mb-4 p-3 bg-light rounded question-block"
+                     data-q="{{ question_index }}">
+                    <p class="fw-bold mb-2">
+                        {{ loop.index }}. {{ question }}
+                    </p>
+
+                    {# One hidden field per question, not one per answer option. #}
+                    <input type="hidden"
+                           name="q{{ question_index }}"
+                           value=""
+                           class="answer-input">
+
+                    <div class="d-flex flex-wrap gap-2 option-buttons">
                         {% set labels = ['Not at all', 'Rarely', 'Sometimes', 'Often', 'Very often'] %}
                         {% for i in range(5) %}
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio"
-                                   name="q{{ loop.index0 }}" id="q{{ loop.index0 }}_{{ i }}"
-                                   value="{{ i }}" required>
-                            <label class="form-check-label" for="q{{ loop.index0 }}_{{ i }}">
-                                {{ labels[i] }}
-                            </label>
-                        </div>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary option-btn"
+                                data-value="{{ i }}">
+                            {{ labels[i] }}
+                        </button>
                         {% endfor %}
                     </div>
+
+                    <div class="selected-value mt-2 text-muted small"
+                         aria-live="polite"></div>
                 </div>
                 {% endfor %}
 
-                <button type="submit" class="btn btn-primary btn-lg w-100">Submit Assessment</button>
+                <div id="assessmentError"
+                     class="alert alert-danger d-none"
+                     role="alert">
+                    Please answer all questions before submitting.
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">
+                    Submit Assessment
+                </button>
             </form>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const form = document.getElementById('assessmentForm');
+    if (!form) return;
+
+    const errorMessage = document.getElementById('assessmentError');
+    const labels = ['Not at all', 'Rarely', 'Sometimes', 'Often', 'Very often'];
+
+    form.addEventListener('click', function (event) {
+        const button = event.target.closest('.option-btn');
+        if (!button || !form.contains(button)) return;
+
+        const questionBlock = button.closest('.question-block');
+        if (!questionBlock) return;
+
+        const answerInput = questionBlock.querySelector('.answer-input');
+        if (!answerInput) return;
+
+        const value = button.dataset.value;
+        answerInput.value = value;
+
+        questionBlock.querySelectorAll('.option-btn').forEach(function (option) {
+            const selected = option === button;
+            option.classList.toggle('btn-primary', selected);
+            option.classList.toggle('btn-outline-secondary', !selected);
+            option.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        });
+
+        const selectedDisplay = questionBlock.querySelector('.selected-value');
+        if (selectedDisplay) {
+            selectedDisplay.textContent = 'Selected: ' + labels[Number(value)];
+        }
+
+        questionBlock.classList.remove('border', 'border-danger');
+        if (errorMessage) errorMessage.classList.add('d-none');
+    });
+
+    form.addEventListener('submit', function (event) {
+        const questionBlocks = Array.from(form.querySelectorAll('.question-block'));
+        const unanswered = questionBlocks.filter(function (block) {
+            const input = block.querySelector('.answer-input');
+            return !input || input.value === '';
+        });
+
+        if (unanswered.length > 0) {
+            event.preventDefault();
+
+            questionBlocks.forEach(function (block) {
+                const input = block.querySelector('.answer-input');
+                const missing = !input || input.value === '';
+                block.classList.toggle('border', missing);
+                block.classList.toggle('border-danger', missing);
+            });
+
+            if (errorMessage) errorMessage.classList.remove('d-none');
+            unanswered[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        if (errorMessage) errorMessage.classList.add('d-none');
+    });
+})();
+</script>
 {% endblock %}

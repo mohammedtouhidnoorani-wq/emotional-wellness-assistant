@@ -119,7 +119,7 @@ def submit(category):
 
     for i in range(len(assessment['questions'])):
         answer = request.form.get(f'q{i}')
-        if answer is None:
+        if answer is None or answer == '':
             flash('Please answer all questions.', 'danger')
             return redirect(url_for('assessment.take', category=category))
         answers.append(int(answer))
@@ -150,9 +150,26 @@ def submit(category):
 
     db.session.commit()
 
-    return render_template('assessment/result.html',
-                           category=category,
-                           score=score,
-                           severity_label=severity_label,
-                           severity_desc=severity_desc,
-                           crisis_triggered=crisis_triggered)
+    # Return simple HTML response directly
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Assessment Result</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body>
+        <div class="container py-5">
+            <div class="card p-4 text-center">
+                <h1>Your Result</h1>
+                <h2>Category: {category}</h2>
+                <h3>Score: {score}</h3>
+                <h4>Severity: {severity_label}</h4>
+                <p>{severity_desc}</p>
+                <a href="/assessment" class="btn btn-primary">Back to Assessments</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    

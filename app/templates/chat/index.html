@@ -74,6 +74,21 @@
         margin-bottom: 1rem;
         display: none;
     }
+    .suggestion-section {
+        background: #f0f7ff;
+        border-radius: 15px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: none;
+    }
+    .suggestion-section h6 {
+        color: #667eea;
+        margin-bottom: 0.75rem;
+    }
+    .suggestion-btn {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
+    }
 </style>
 {% endblock %}
 
@@ -88,8 +103,18 @@
         <small class="text-muted">This app is not a substitute for professional help.</small>
     </div>
 
+    <div class="suggestion-section" id="suggestionSection">
+        <h6><i class="bi bi-lightbulb"></i> Suggestions for You</h6>
+        <div id="exerciseSuggestions" class="mb-2"></div>
+        <div id="assessmentSuggestions"></div>
+    </div>
+
     <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="Chat messages">
-        {% if not messages %}
+        {% if initial_greeting %}
+        <div class="message message-assistant">
+            I see you're feeling <strong>{{ initial_greeting.mood }}</strong>. {{ initial_greeting.question }}
+        </div>
+        {% elif not messages %}
         <div class="message message-assistant">
             Hello! I'm your wellness support companion. I'm here to listen, offer coping strategies,
             and support your emotional well-being. How are you feeling today?
@@ -124,6 +149,13 @@ const chatForm = document.getElementById('chatForm');
 const messageInput = document.getElementById('messageInput');
 const typingIndicator = document.getElementById('typingIndicator');
 const crisisAlert = document.getElementById('crisisAlert');
+const suggestionSection = document.getElementById('suggestionSection');
+const exerciseSuggestions = document.getElementById('exerciseSuggestions');
+const assessmentSuggestions = document.getElementById('assessmentSuggestions');
+
+// Get last mood from template variable
+const lastMood = {{ last_mood | tojson }};
+let messageCount = 0;
 
 // Scroll to bottom
 chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -132,6 +164,8 @@ chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const message = messageInput.value.trim();
     if (!message) return;
+    
+    messageCount++;
 
     // Add user message
     addMessage(message, 'user');
@@ -155,11 +189,58 @@ chatForm.addEventListener('submit', async (e) => {
         if (data.crisis_detected) {
             crisisAlert.style.display = 'block';
         }
+        
+        // After 2 messages, show suggestions
+        if (messageCount >= 2) {
+            loadSuggestions();
+        }
     } catch (error) {
         typingIndicator.style.display = 'none';
         addMessage('Sorry, I encountered an issue. Please try again.', 'assistant');
     }
 });
+
+async function loadSuggestions() {
+    if (suggestionSection.style.display === 'block') return;
+    
+    try {
+        const response = await fetch('/chat/suggestions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mood: lastMood, context: 'chat' })
+        });
+        const data = await response.json();
+        
+        let hasSuggestions = false;
+        
+        // Show exercises
+        if (data.exercises && data.exercises.length > 0) {
+            hasSuggestions = true;
+            let exerciseHtml = '<strong><i class="bi bi-flower1"></i> Recommended Exercises:</strong><br>';
+            data.exercises.forEach(ex => {
+                exerciseHtml += `<a href="${ex.url}" target="_blank" class="btn btn-sm btn-outline-primary suggestion-btn me-1 mb-1">${ex.title} (${ex.duration}min)</a>`;
+            });
+            exerciseSuggestions.innerHTML = exerciseHtml;
+        }
+        
+        // Show assessments
+        if (data.assessments && data.assessments.length > 0) {
+            hasSuggestions = true;
+            let assessmentHtml = '<strong><i class="bi bi-clipboard-check"></i> Recommended Assessments:</strong><br>';
+            data.assessments.forEach(a => {
+                assessmentHtml += `<a href="${a.url}" target="_blank" class="btn btn-sm btn-outline-success suggestion-btn me-1 mb-1">Take ${a.category} assessment (${a.reason})</a>`;
+            });
+            assessmentSuggestions.innerHTML = assessmentHtml;
+        }
+        
+        if (hasSuggestions) {
+            suggestionSection.style.display = 'block';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    } catch (error) {
+        console.error('Error loading suggestions:', error);
+    }
+}
 
 function addMessage(text, role) {
     const div = document.createElement('div');

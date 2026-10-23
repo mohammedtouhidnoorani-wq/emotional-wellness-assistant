@@ -24,6 +24,7 @@ def create_app(config_class=Config):
     from app.routes.mood import mood_bp
     from app.routes.assessment import assessment_bp
     from app.routes.mindfulness import mindfulness_bp
+    from app.routes.trading import trading_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -31,6 +32,7 @@ def create_app(config_class=Config):
     app.register_blueprint(mood_bp, url_prefix='/mood')
     app.register_blueprint(assessment_bp, url_prefix='/assessment')
     app.register_blueprint(mindfulness_bp, url_prefix='/mindfulness')
+    app.register_blueprint(trading_bp, url_prefix='/trading')
 
     with app.app_context():
         db.create_all()

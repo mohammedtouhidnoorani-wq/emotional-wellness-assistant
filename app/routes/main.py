@@ -82,3 +82,4 @@ def generate_recommendations(moods, assessment):
         })
 
     return recommendations[:5]
+    

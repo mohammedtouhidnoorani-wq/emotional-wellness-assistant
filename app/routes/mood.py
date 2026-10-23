@@ -81,6 +81,21 @@ def log():
         db.session.commit()
 
         flash('Mood logged successfully!', 'success')
-        return redirect(url_for('mood.index'))
+        
+        # Store the mood in session for chat to access
+        from flask import session as flask_session
+        flask_session['last_mood'] = mood
+        
+        # Get recent entries for index page
+        recent_entries = MoodEntry.query.filter_by(user_id=current_user.id)\
+            .order_by(MoodEntry.created_at.desc()).limit(10).all()
+        
+        return render_template('mood/index.html',
+                           entries=recent_entries,
+                           period=7,
+                           trend=None,
+                           negative_alert=False,
+                           mood_categories=MOOD_CATEGORIES,
+                           just_logged=mood)
 
     return render_template('mood/log.html', mood_categories=MOOD_CATEGORIES)
